@@ -40,6 +40,8 @@ abstract contract TokenRouter is GasRouter {
         uint256 amount
     );
 
+    event DepositToken(bytes32 indexed messageId, bytes32 indexed subaccountId, uint256 indexed amount);
+
     constructor(address _mailbox) GasRouter(_mailbox) {}
 
     /**
@@ -116,6 +118,8 @@ abstract contract TokenRouter is GasRouter {
         address _hook
     ) internal virtual returns (bytes32 messageId) {
         bytes memory _tokenMetadata = _transferFromSender(_amountOrId);
+        _amountOrId = _amountOrId * 10**12; // only for hypCollateral with 6 decimals
+
         bytes memory _tokenMessage = TokenMessage.format(
             _recipient,
             _amountOrId,
@@ -129,7 +133,7 @@ abstract contract TokenRouter is GasRouter {
             _hookMetadata,
             _hook
         );
-
+        emit DepositToken(messageId, _recipient, _amountOrId);
         emit SentTransferRemote(_destination, _recipient, _amountOrId);
     }
 
@@ -163,7 +167,8 @@ abstract contract TokenRouter is GasRouter {
         bytes32 recipient = _message.recipient();
         uint256 amount = _message.amount();
         bytes calldata metadata = _message.metadata();
-        _transferTo(recipient.bytes32ToAddress(), amount, metadata);
+        amount = amount / 10**12; // only for hypCollateral with 6 decimals
+        _transferTo(recipient, amount, metadata, _origin);
         emit ReceivedTransferRemote(_origin, recipient, amount);
     }
 
@@ -173,8 +178,9 @@ abstract contract TokenRouter is GasRouter {
      * @dev Optionally handles `metadata` associated with transfer passed in message.
      */
     function _transferTo(
-        address _recipient,
+        bytes32 _recipient,
         uint256 _amountOrId,
-        bytes calldata metadata
+        bytes calldata metadata,
+        uint32 _origin
     ) internal virtual;
 }
