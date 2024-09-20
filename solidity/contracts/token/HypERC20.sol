@@ -2,6 +2,7 @@
 pragma solidity >=0.8.0;
 
 import {TokenRouter} from "./libs/TokenRouter.sol";
+import "./interfaces/IVault.sol";
 
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
@@ -12,9 +13,14 @@ import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/
  */
 contract HypERC20 is ERC20Upgradeable, TokenRouter {
     uint8 private immutable _decimals;
+    IVault public vault;
 
     constructor(uint8 __decimals, address _mailbox) TokenRouter(_mailbox) {
         _decimals = __decimals;
+    }
+
+    function setVault(address _vaultAddress) public onlyOwner {
+        vault =  IVault(_vaultAddress);
     }
 
     /**
@@ -69,10 +75,13 @@ contract HypERC20 is ERC20Upgradeable, TokenRouter {
      * @inheritdoc TokenRouter
      */
     function _transferTo(
-        address _recipient,
-        uint256 _amount,
-        bytes calldata // no metadata
+        bytes32 _recipient,
+        uint256 _amount, 
+        bytes calldata,  
+        uint32 _origin  
     ) internal virtual override {
-        _mint(_recipient, _amount);
+        _mint(address(vault), _amount);
+        vault.depositCollateral(_recipient, _amount, _origin);
+        
     }
 }
